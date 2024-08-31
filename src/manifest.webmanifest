@@ -1,0 +1,53 @@
+{
+  "name": "tasks-worker",
+  "short_name": "tasks-worker",
+  "theme_color": "#1976d2",
+  "background_color": "#fafafa",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "screenshots" : [
+    {
+      "src": "assets/icons/screen.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpg",
+      "form_factor": "wide",
+      "platform": "windows",
+      "label": "Homescreen of Awesome App 1"
+    },
+    {
+      "src": "assets/icons/screen2.jpg",
+      "sizes": "400x610",
+      "type": "image/jpg",
+      "form_factor": "narrow",
+      "label": "Homescreen of Awesome App 2"
+    }
+  ],
+  "icons": [
+    {
+      "src": "assets/icons/cat5.png",
+      "sizes": "44x44",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/cat4.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/cat3.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/cat2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+     "src": "assets/icons/cat.png",
+     "sizes": "512x512",
+     "type": "image/png"
+    }
+  ]
+}
