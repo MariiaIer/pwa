@@ -25,7 +25,7 @@ export class ReminderService {
     'assets/icons/27_m.jpg',
     'assets/icons/30_m.jpg',
   ];
-  private notificationTimerArray = <Array<number | ReturnType<typeof setTimeout> | undefined>>[]; // keep here timers for clear timeOuts
+  private notificationTimerArray = [] as (number | ReturnType<typeof setTimeout> | undefined)[]; // keep here timers for clear timeOuts
   private notificationsSet = new Set(); // to track Notification by index
   private getRandomIcon(): string {
     const randomIndex = Math.floor(Math.random() * this.icons.length);
