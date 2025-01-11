@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { NotificationObject } from '../types/notification';
+import {Injectable, signal} from '@angular/core';
+import {CounterObject, NotificationObject} from '../types/notification';
 
 @Injectable({
   providedIn: 'root'
@@ -25,16 +25,31 @@ export class ReminderService {
     'assets/icons/27_m.jpg',
     'assets/icons/30_m.jpg',
   ];
-  private notificationTimerArray = [] as (number | ReturnType<typeof setTimeout> | undefined)[]; // keep here timers for clear timeOuts
-  private notificationsSet = new Set(); // to track Notification by index
+  private notificationTimerArray: CounterObject[] = []; // keep here timers' references to clear timeOuts
+  private notificationsSet: Set<number> = new Set<number>(); // to track Notification by index
+  public acceptNewTasksSignal = signal<boolean>(true);
+
+
   private getRandomIcon(): string {
     const randomIndex = Math.floor(Math.random() * this.icons.length);
     return this.icons[randomIndex];
   }
 
-  private clearNotificationTimer(index: number): void {
-    clearTimeout(this.notificationTimerArray[index]);
+
+  public getNotificationTimerArray(): CounterObject[] {
+    return this.notificationTimerArray;
   }
+
+
+  private clearNotificationTimer(index: number): void {
+    const timerIndex = this.notificationTimerArray.findIndex((_, i) => i === index);
+    if (timerIndex !== -1) {
+      clearTimeout(this.notificationTimerArray[timerIndex].id);
+      this.notificationTimerArray.splice(timerIndex, 1);
+      this.notificationsSet.delete(index);
+    }
+  }
+
 
   private showNotification(object: NotificationObject): void {
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -44,7 +59,8 @@ export class ReminderService {
     }
   }
 
-  public setReminder(time: string, message: string, index: number): void {
+
+  public setReminder(time: string, message: string, index: number, resolve: Function): void {
     if (!this.notificationsSet.has(index)) { // if not yet added
       const delay = new Date(time).getTime() - new Date().getTime();
       const randomIcon = this.getRandomIcon();
@@ -54,13 +70,35 @@ export class ReminderService {
         requireInteraction: true
       }
       this.notificationsSet.add(index);
-      this.notificationTimerArray.push(
-        setTimeout(() => {
-          this.showNotification(notificationObject);
-        }, delay)
-      );
+      const timer = this.createMainTimer(notificationObject, delay);
+      this.notificationTimerArray.push({ id: timer, completed: false });
+      resolve();
+    } else {
+      throw new Error(`Reminder with index ${index} already exists.`);
     }
   }
+
+
+  private createMainTimer(notificationObject: NotificationObject, delay: number): ReturnType<typeof setTimeout> {
+    const timer = setTimeout(() => {
+      this.showNotification(notificationObject);
+
+      // Mark this timer as completed
+      const timerIndex = this.notificationTimerArray.findIndex(t => t.id === timer);
+      if (timerIndex !== -1) {
+        this.notificationTimerArray[timerIndex].completed = true;
+
+        // Check if all timers are completed
+        if (this.notificationTimerArray.every(t => t.completed)) {
+          console.log('All notifications have been shown.');
+          this.onAllTimersComplete();
+        }
+      }
+    }, delay);
+
+    return timer;
+  }
+
 
   public requestPermission(): void {
     Notification.requestPermission().then(permission => {
@@ -72,9 +110,21 @@ export class ReminderService {
     });
   }
 
+
   public removeNotification(index: number): void {
     this.clearNotificationTimer(index)
     this.notificationsSet.delete(index);
+  }
+
+
+  public disallowAcceptNewTasks(): void {
+    this.acceptNewTasksSignal.set(false);
+  }
+
+
+  private onAllTimersComplete(): void {
+    console.log('All notification timers have finished.');
+    this.acceptNewTasksSignal.set(true);
   }
 
 }

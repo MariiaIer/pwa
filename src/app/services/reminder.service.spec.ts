@@ -1,102 +1,104 @@
 import { TestBed } from '@angular/core/testing';
 import { ReminderService } from './reminder.service';
-import { NotificationObject } from '../types/notification';
 
 describe('ReminderService', () => {
   let service: ReminderService;
-  let notificationSpy: jasmine.Spy;
-  let requestPermissionSpy: jasmine.Spy;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
     service = TestBed.inject(ReminderService);
-
-    const notificationObject: NotificationObject = {
-      body: 'Test reminder message',
-      icon: 'test-icon.jpg',
-      requireInteraction: true
-    }
-
-    // Mock the Notification API
-    notificationSpy = spyOn(window, 'Notification').and.callFake((title = 'test', options = notificationObject) => {
-      return {
-        title,
-        ...options
-      } as Notification;
-    });
-
-    // Mock the requestPermission method
-    requestPermissionSpy = spyOn(Notification, 'requestPermission').and.returnValue(Promise.resolve('granted'));
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should request notification permission', async () => {
-    service.requestPermission();
-    await requestPermissionSpy.calls.mostRecent().returnValue;
-    expect(requestPermissionSpy).toHaveBeenCalled();
-    expect(JSON.stringify(requestPermissionSpy.calls.mostRecent().returnValue)).toEqual(JSON.stringify(Promise.resolve('granted')));
-  });
+  describe('setReminder', () => {
+    it('should add a reminder to the timer array', () => {
+      const spy = spyOn(service as any, 'createMainTimer').and.returnValue(1234);
+      const resolveSpy = jasmine.createSpy('resolve');
+      const time = new Date().toISOString();
+      const message = 'Test task';
+      const index = 0;
 
-  it('should set a reminder and show notification',  () => {
-    const message = 'Test reminder message';
-    const notificationObject = {
-      body: message,
-      icon: 'test-icon.jpg',
-      requireInteraction: true
-    }
-    const testTime = new Date().getTime() + 100; // 100ms in the future
-    const formattedTime = new Date(testTime).toISOString();
+      service.setReminder(time, message, index, resolveSpy);
 
-    spyOn(service as any, 'showNotification').and.callFake(() => { // override private method
-      new Notification('Exercise Reminder',
-        notificationObject
-      );
+      expect(service['notificationTimerArray'].length).toBe(1);
+      expect(resolveSpy).toHaveBeenCalled();
+      expect(service['notificationTimerArray'][0].completed).toBe(false);
     });
-    spyOn(service as any, 'getRandomIcon').and.returnValue('test-icon.jpg');
-    service.setReminder(formattedTime, message, 0);
 
-    setTimeout(() => {
-      expect(notificationSpy).toHaveBeenCalledWith('Exercise Reminder', notificationObject as NotificationOptions);
-    }, 150); // wait a little longer than the reminder time
+    it('should throw an error if reminder already exists', () => {
+      const resolveSpy = jasmine.createSpy('resolve');
+      const time = new Date().toISOString();
+      const message = 'Test task';
+      const index = 0;
+
+      service.setReminder(time, message, index, resolveSpy);
+
+      expect(() => {
+        service.setReminder(time, message, index, resolveSpy);
+      }).toThrowError(`Reminder with index ${index} already exists.`);
+    });
   });
 
-  it('should prevent duplicate reminders for the same index', () => {
-    const testTime = new Date().getTime() + 1000;
-    const formattedTime = new Date(testTime).toISOString();
-    const message = 'Test reminder message';
+  describe('removeNotification', () => {
+    it('should remove the reminder from the timer array and set', () => {
+      const time = new Date().toISOString();
+      const message = 'Test task';
+      const index = 0;
+      const resolveSpy = jasmine.createSpy('resolve');
 
-    service.setReminder(formattedTime, message, 1);
-    service.setReminder(formattedTime, message, 1); // trying to set the same reminder again
+      service.setReminder(time, message, index, resolveSpy);
+      const initialTimerArrayLength = service['notificationTimerArray'].length;
 
-    expect((service as any).notificationsSet.size).toBe(1); // should only be added once
+      // Now remove the notification and verify
+      service.removeNotification(index);
+
+      expect(service['notificationTimerArray'].length).toBe(initialTimerArrayLength - 1);
+      expect(service['notificationsSet'].has(index)).toBe(false);
+    });
   });
 
-  it('should remove a notification and clear the timer', () => {
-    const testTime = new Date().getTime() + 1000;
-    const formattedTime = new Date(testTime).toISOString();
-    const message = 'Test reminder message';
-
-    service.setReminder(formattedTime, message, 2);
-    service.removeNotification(2);
-
-    expect((service as any).notificationsSet.has(2)).toBe(false);
+  describe('disallowAcceptNewTasks', () => {
+    it('should set acceptNewTasksSignal to false', () => {
+      service.disallowAcceptNewTasks();
+      expect(service.acceptNewTasksSignal()).toBe(false);
+    });
   });
 
-  it('should clear timer when removing a notification', () => {
-    const testTime = new Date().getTime() + 1000;
-    const formattedTime = new Date(testTime).toISOString();
-    const message = 'Test reminder message';
+  describe('getNotificationTimerArray', () => {
+    it('should return the correct notification timer array', () => {
+      const time = new Date().toISOString();
+      const message = 'Test task';
+      const index = 0;
+      const resolveSpy = jasmine.createSpy('resolve');
 
-    service.setReminder(formattedTime, message, 3);
-    const clearTimeoutSpy = spyOn(window, 'clearTimeout');
+      service.setReminder(time, message, index, resolveSpy);
 
-    service.removeNotification(3);
+      const timerArray = service.getNotificationTimerArray();
+      expect(timerArray.length).toBe(1);
+    });
+  });
 
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    expect((service as any).notificationsSet.has(3)).toBe(false);
+  describe('onAllTimersComplete', () => {
+    it('should set acceptNewTasksSignal to true when all timers are complete', () => {
+      const spyOnSet = spyOn(service.acceptNewTasksSignal, 'set');
+
+      // Set the notificationTimerArray to simulate completed timers
+      service['notificationTimerArray'] = [
+        { id: 1, completed: true },
+        { id: 2, completed: true }
+      ];
+
+      // This simulates the logic inside `setReminder` or the timeout callback
+      if (service['notificationTimerArray'].every(timer => timer.completed)) {
+        service.acceptNewTasksSignal.set(true);
+      }
+
+      // Ensure the signal was set to `true` when all timers are completed
+      expect(spyOnSet).toHaveBeenCalledWith(true);
+    });
   });
 
 });

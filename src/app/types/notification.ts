@@ -3,3 +3,7 @@ export interface NotificationObject {
   icon: string;
   requireInteraction: boolean;
 }
+export interface CounterObject {
+  id: ReturnType<typeof setTimeout>,
+  completed: boolean
+}

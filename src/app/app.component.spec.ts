@@ -9,7 +9,17 @@ describe('AppComponent', () => {
   let reminderServiceSpy: jasmine.SpyObj<ReminderService>;
 
   beforeEach(async () => {
-    const reminderSpy = jasmine.createSpyObj('ReminderService', ['setReminder', 'removeNotification', 'requestPermission']);
+    const reminderSpy = jasmine.createSpyObj('ReminderService', [
+      'setReminder',
+      'removeNotification',
+      'requestPermission',
+      'getNotificationTimerArray',
+      'acceptNewTasksSignal'
+    ]);
+
+    // Mocking service methods
+    reminderSpy.getNotificationTimerArray.and.returnValue([]); // Mocking getNotificationTimerArray response
+    reminderSpy.acceptNewTasksSignal.and.returnValue(true); // Mocking a return value for the signal
 
     await TestBed.configureTestingModule({
       imports: [ReactiveFormsModule],
@@ -22,15 +32,18 @@ describe('AppComponent', () => {
 
     fixture = TestBed.createComponent(AppComponent);
     component = fixture.componentInstance;
-    reminderServiceSpy = TestBed.inject(ReminderService) as jasmine.SpyObj<ReminderService>;
+    reminderServiceSpy = TestBed.inject(ReminderService)  as jasmine.SpyObj<ReminderService>;
     fixture.detectChanges();
+    await fixture.whenStable();  // Wait for async tasks to finish
   });
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize with one reminder form group', () => {
+  it('should initialize with one reminder form group', async () => {
+    // Ensure that ngOnInit has completed before checking
+    await fixture.whenStable(); // Waits for asynchronous tasks in the component to finish
     expect(component.reminders.length).toBe(1);
   });
 
@@ -55,9 +68,11 @@ describe('AppComponent', () => {
 
   it('should set reminders and call setReminder from ReminderService', () => {
     component.reminders.at(0).setValue({ time: '10:00', message: 'Test task' });
+    // Call setReminders to trigger the service method
     component.setReminders();
-    expect(reminderServiceSpy.setReminder).toHaveBeenCalledWith('10:00', 'Test task', 0);
+    expect(reminderServiceSpy.setReminder).toHaveBeenCalledWith('10:00', 'Test task', 0, jasmine.any(Function));
   });
+
 
   it('should request notification permission on init', () => {
     component.ngOnInit();

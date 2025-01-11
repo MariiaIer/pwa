@@ -63,6 +63,10 @@ button {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
+button[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
 
 button:hover {
   background-color: #0056b3;
