@@ -7,10 +7,10 @@
     <div *ngFor="let reminder of reminders.controls; let i = index" [formGroupName]="i" class="reminder-group">
 
       <label [attr.for]="'time-' + i">Select Time:</label>
-      <input type="datetime-local" formControlName="time" required [attr.id]="'time-' + i" />
+      <input type="datetime-local" formControlName="time" required [readonly]="!acceptNewTasks()" [attr.id]="'time-' + i" />
 
       <label [attr.for]="'message-' + i">Reminder Message:</label>
-      <input type="text" formControlName="message" required [attr.id]="'message-' + i" />
+      <input type="text" formControlName="message" required [readonly]="!acceptNewTasks()" [attr.id]="'message-' + i" />
 
       <button type="button" class="remove" (click)="removeReminder(i)" *ngIf="reminders.length > 1">
         &times;
@@ -19,6 +19,6 @@
     </div>
   </div>
 
-  <button type="button" (click)="addReminder()">Add Reminder</button>
-  <button type="submit">Set Reminders</button>
+  <button type="button" (click)="addReminder()" *ngIf="checkAddReminderDisabled()">Add Reminder</button>
+  <button type="submit" [disabled]="checkSubmitDisabled()">Set Reminders</button>
 </form>
